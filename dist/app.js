@@ -79,47 +79,102 @@ var BABYLON = require('babylonjs');
 new _helloJs2['default']().say();
 
 window.addEventListener('DOMContentLoaded', function () {
-    var canvas = document.getElementById('renderCanvas');
-    var engine = new BABYLON.Engine(canvas, true);
-    var createScene = function createScene() {
+  var canvas = document.getElementById('renderCanvas');
+  var engine = new BABYLON.Engine(canvas, true);
+  var createScene = function createScene() {
+    var scene = new BABYLON.Scene(engine);
+    // Create camera and light
+    var light = new BABYLON.PointLight("Point", new BABYLON.Vector3(5, 10, 5), scene);
+    // Need a free camera for collisions
+    var camera = new BABYLON.FreeCamera("FreeCamera", new BABYLON.Vector3(0, -8, -20), scene);
+    camera.attachControl(canvas, true);
 
-        // This creates a basic Babylon Scene object (non-mesh)
-        var scene = new BABYLON.Scene(engine);
+    //Ground
+    var ground = BABYLON.Mesh.CreatePlane("ground", 20.0, scene);
+    ground.material = new BABYLON.StandardMaterial("groundMat", scene);
+    ground.material.diffuseColor = new BABYLON.Color3(1, 1, 1);
+    ground.material.backFaceCulling = false;
+    ground.position = new BABYLON.Vector3(5, -10, -15);
+    ground.rotation = new BABYLON.Vector3(Math.PI / 2, 0, 0);
 
-        // This creates and positions a free camera (non-mesh)
-        var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0, 5, -10), scene);
+    //Simple crate
+    var box = new BABYLON.Mesh.CreateBox("crate", 2, scene);
+    box.material = new BABYLON.StandardMaterial("Mat", scene);
+    box.material.diffuseColor = new BABYLON.Color3(0, 0, 0);
+    box.position = new BABYLON.Vector3(5, -9, -10);
 
-        // This targets the camera to scene origin
-        camera.setTarget(BABYLON.Vector3.Zero());
+    //Set gravity for the scene (G force like, on Y-axis)
+    scene.gravity = new BABYLON.Vector3(0, -0.9, 0);
 
-        // This attaches the camera to the canvas
-        camera.attachControl(canvas, true);
+    // Enable Collisions
+    scene.collisionsEnabled = true;
 
-        // This creates a light, aiming 0,1,0 - to the sky (non-mesh)
-        var light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);
+    //Then apply collisions and gravity to the active camera
+    camera.checkCollisions = true;
+    camera.applyGravity = true;
 
-        // Default intensity is 1. Let's dim the light a small amount
-        light.intensity = 0.7;
+    //Set the ellipsoid around the camera (e.g. your player's size)
+    camera.ellipsoid = new BABYLON.Vector3(1, 1, 1);
 
-        // Our built-in 'sphere' shape. Params: name, subdivs, size, scene
-        var sphere = BABYLON.Mesh.CreateSphere("sphere1", 16, 2, scene);
+    //finally, say which mesh will be collisionable
+    ground.checkCollisions = true;
+    box.checkCollisions = true;
 
-        // Move the sphere upward 1/2 its height
-        sphere.position.y = 1;
+    //Create a manager for the player's sprite animation
+    var spriteManagerDragon = new BABYLON.SpriteManager("dragonManager", "textures/dragon.png", 2, 128, scene);
+    // First animated player
+    var dragon = new BABYLON.Sprite("player", spriteManagerDragon);
+    dragon.playAnimation(12, 16, true, 100);
+    dragon.position.z = -19;
+    dragon.position.y = -8;
+    dragon.size = 1;
+    dragon.isPickable = true;
 
-        // Our built-in 'ground' shape. Params: name, width, depth, subdivs, scene
-        var ground = BABYLON.Mesh.CreateGround("ground1", 6, 6, 2, scene);
+    window.addEventListener("keyup", onKeyUp, false);
+    var sceneJump = scene;
+    function onKeyUp(event) {
+      switch (event.keyCode) {
+        case 32:
+          camera.animations = [];
+          var a = new BABYLON.Animation("a", "position.y", 20, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
+          // Animation keys
+          var keys = [];
+          var f = 0;
+          var ii = 0;
+          for (var i = 0; i <= 5; i++) {
+            ii += i / 10;
+            keys.push({ frame: f, value: camera.position.y + ii });
+            f++;
+          }
+          var ii = 0;
+          for (var i = 0; i <= 5; i++) {
+            ii += i / 10;
+            keys.push({ frame: f, value: camera.position.y + 1.5 - ii });
+            f++;
+          }
+          a.setKeys(keys);
+          var easingFunction = new BABYLON.CircleEase();
+          easingFunction.setEasingMode(BABYLON.EasingFunction.EASINGMODE_EASEINOUT);
+          a.setEasingFunction(easingFunction);
+          camera.animations.push(a);
+          sceneJump.beginAnimation(camera, 0, 20, false);
+          break;
+      }
+    }
 
-        return scene;
-    };
-
-    var scene = createScene();
-    engine.runRenderLoop(function () {
-        scene.render();
+    scene.registerBeforeRender(function () {
+      dragon.position.z += 0.1;
     });
-    window.addEventListener('resize', function () {
-        engine.resize();
-    });
+
+    return scene;
+  };
+  var scene = createScene();
+  engine.runRenderLoop(function () {
+    scene.render();
+  });
+  window.addEventListener('resize', function () {
+    engine.resize();
+  });
 });
 
 },{"./hello.js":2,"babylonjs":1}]},{},[3]);
