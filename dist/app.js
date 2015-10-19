@@ -152,7 +152,7 @@ var Game = (function () {
   }, {
     key: 'onKeyUp',
     value: function onKeyUp(ev) {
-      switch (event.keyCode) {
+      switch (ev.keyCode) {
         case 32:
           this.player.animations = [];
 

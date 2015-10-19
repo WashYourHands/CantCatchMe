@@ -46,7 +46,7 @@ export default class Game {
   }
 
   onKeyUp(ev) {
-    switch (event.keyCode) {
+    switch (ev.keyCode) {
       case 32:
         this.player.animations = [];
 
