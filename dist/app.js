@@ -43,138 +43,245 @@ Object.defineProperty(exports, '__esModule', {
   value: true
 });
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
-var HelloWorld = (function () {
-  function HelloWorld() {
-    _classCallCheck(this, HelloWorld);
-  }
+var babylon = require('babylonjs');
 
-  _createClass(HelloWorld, [{
-    key: 'say',
-    value: function say() {
-      console.log('hello world');
-    }
-  }]);
+var TEXTURE_PATH = 'textures/dragon.png';
 
-  return HelloWorld;
-})();
+var Dragon = function Dragon(options) {
+  var _this = this;
 
-exports['default'] = HelloWorld;
+  _classCallCheck(this, Dragon);
+
+  // First animated player
+  this.sprite = new babylon.Sprite("player", new babylon.SpriteManager('dragonManager', TEXTURE_PATH, 2, 128, options.scene));
+  this.sprite.playAnimation(12, 16, true, 100);
+  this.sprite.position.z = -19;
+  this.sprite.position.y = -8;
+  this.sprite.size = 1;
+  this.sprite.isPickable = true;
+
+  options.scene.registerBeforeRender(function () {
+    _this.sprite.position.z += 0.1;
+  });
+};
+
+exports['default'] = Dragon;
 module.exports = exports['default'];
 
-},{}],3:[function(require,module,exports){
+},{"babylonjs":1}],3:[function(require,module,exports){
 'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _helloJs = require("./hello.js");
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
-var _helloJs2 = _interopRequireDefault(_helloJs);
+var _PlayerJs = require('./Player.js');
 
-var BABYLON = require('babylonjs');
+var _PlayerJs2 = _interopRequireDefault(_PlayerJs);
 
-new _helloJs2['default']().say();
+var _GroundJs = require('./Ground.js');
 
-window.addEventListener('DOMContentLoaded', function () {
-  var canvas = document.getElementById('renderCanvas');
-  var engine = new BABYLON.Engine(canvas, true);
-  var createScene = function createScene() {
-    var scene = new BABYLON.Scene(engine);
+var _GroundJs2 = _interopRequireDefault(_GroundJs);
+
+var _DragonJs = require('./Dragon.js');
+
+var _DragonJs2 = _interopRequireDefault(_DragonJs);
+
+var babylon = require('babylonjs');
+
+var Game = (function () {
+  function Game(options) {
+    _classCallCheck(this, Game);
+
+    this.engine = new babylon.Engine(options.canvas, true);
+    this.scene = new babylon.Scene(this.engine);
+
     // Create camera and light
-    var light = new BABYLON.PointLight("Point", new BABYLON.Vector3(5, 10, 5), scene);
-    // Need a free camera for collisions
-    var camera = new BABYLON.FreeCamera("FreeCamera", new BABYLON.Vector3(0, -8, -20), scene);
-    camera.attachControl(canvas, true);
+    // TODO: is it used?
+    new babylon.PointLight("Point", new babylon.Vector3(5, 10, 5), this.scene);
 
-    //Ground
-    var ground = BABYLON.Mesh.CreatePlane("ground", 20.0, scene);
-    ground.material = new BABYLON.StandardMaterial("groundMat", scene);
-    ground.material.diffuseColor = new BABYLON.Color3(1, 1, 1);
-    ground.material.backFaceCulling = false;
-    ground.position = new BABYLON.Vector3(5, -10, -15);
-    ground.rotation = new BABYLON.Vector3(Math.PI / 2, 0, 0);
+    this.player = new _PlayerJs2['default']({
+      scene: this.scene,
+      canvas: options.canvas
+    });
 
-    //Simple crate
-    var box = new BABYLON.Mesh.CreateBox("crate", 2, scene);
-    box.material = new BABYLON.StandardMaterial("Mat", scene);
-    box.material.diffuseColor = new BABYLON.Color3(0, 0, 0);
-    box.position = new BABYLON.Vector3(5, -9, -10);
+    this.ground = new _GroundJs2['default']({
+      scene: this.scene
+    });
 
-    //Set gravity for the scene (G force like, on Y-axis)
-    scene.gravity = new BABYLON.Vector3(0, -0.9, 0);
+    this.dragon = new _DragonJs2['default']({
+      scene: this.scene
+    });
+
+    // Set gravity for the scene (G force like, on Y-axis)
+    this.scene.gravity = new babylon.Vector3(0, -0.9, 0);
 
     // Enable Collisions
-    scene.collisionsEnabled = true;
+    this.scene.collisionsEnabled = true;
+  }
 
-    //Then apply collisions and gravity to the active camera
-    camera.checkCollisions = true;
-    camera.applyGravity = true;
+  _createClass(Game, [{
+    key: 'start',
+    value: function start() {
+      var _this = this;
 
-    //Set the ellipsoid around the camera (e.g. your player's size)
-    camera.ellipsoid = new BABYLON.Vector3(1, 1, 1);
+      this.engine.runRenderLoop(function () {
+        _this.scene.render();
+      });
 
-    //finally, say which mesh will be collisionable
-    ground.checkCollisions = true;
-    box.checkCollisions = true;
-
-    //Create a manager for the player's sprite animation
-    var spriteManagerDragon = new BABYLON.SpriteManager("dragonManager", "textures/dragon.png", 2, 128, scene);
-    // First animated player
-    var dragon = new BABYLON.Sprite("player", spriteManagerDragon);
-    dragon.playAnimation(12, 16, true, 100);
-    dragon.position.z = -19;
-    dragon.position.y = -8;
-    dragon.size = 1;
-    dragon.isPickable = true;
-
-    window.addEventListener("keyup", onKeyUp, false);
-    var sceneJump = scene;
-    function onKeyUp(event) {
-      switch (event.keyCode) {
+      window.addEventListener('resize', function () {
+        return _this.onResize;
+      });
+      window.addEventListener('onkeyup', function () {
+        return _this.onKeyUp;
+      });
+    }
+  }, {
+    key: 'onResize',
+    value: function onResize() {
+      this.engine.resize();
+    }
+  }, {
+    key: 'onKeyUp',
+    value: function onKeyUp(ev) {
+      switch (ev.keyCode) {
         case 32:
-          camera.animations = [];
-          var a = new BABYLON.Animation("a", "position.y", 20, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
+          this.player.animations = [];
+
+          var a = new babylon.Animation("a", "position.y", 20, babylon.Animation.ANIMATIONTYPE_FLOAT, babylon.Animation.ANIMATIONLOOPMODE_CYCLE);
           // Animation keys
           var keys = [];
           var f = 0;
           var ii = 0;
           for (var i = 0; i <= 5; i++) {
             ii += i / 10;
-            keys.push({ frame: f, value: camera.position.y + ii });
+            keys.push({ frame: f, value: this.player.position.y + ii });
             f++;
           }
           var ii = 0;
           for (var i = 0; i <= 5; i++) {
             ii += i / 10;
-            keys.push({ frame: f, value: camera.position.y + 1.5 - ii });
+            keys.push({ frame: f, value: this.player.position.y + 1.5 - ii });
             f++;
           }
           a.setKeys(keys);
-          var easingFunction = new BABYLON.CircleEase();
-          easingFunction.setEasingMode(BABYLON.EasingFunction.EASINGMODE_EASEINOUT);
+          var easingFunction = new babylon.CircleEase();
+          easingFunction.setEasingMode(babylon.EasingFunction.EASINGMODE_EASEINOUT);
           a.setEasingFunction(easingFunction);
-          camera.animations.push(a);
-          sceneJump.beginAnimation(camera, 0, 20, false);
+          this.player.animations.push(a);
+          this.scene.beginAnimation(this.player, 0, 20, false);
           break;
       }
     }
+  }]);
 
-    scene.registerBeforeRender(function () {
-      dragon.position.z += 0.1;
-    });
+  return Game;
+})();
 
-    return scene;
-  };
-  var scene = createScene();
-  engine.runRenderLoop(function () {
-    scene.render();
-  });
-  window.addEventListener('resize', function () {
-    engine.resize();
-  });
+exports['default'] = Game;
+module.exports = exports['default'];
+
+},{"./Dragon.js":2,"./Ground.js":4,"./Player.js":5,"babylonjs":1}],4:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+  value: true
 });
 
-},{"./hello.js":2,"babylonjs":1}]},{},[3]);
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+var babylon = require('babylonjs');
+
+var Ground = function Ground(options) {
+  _classCallCheck(this, Ground);
+
+  this.mesh = babylon.Mesh.CreatePlane('ground', 20.0, options.scene);
+  this.mesh.material = new babylon.StandardMaterial('groundMat', options.scene);
+  this.mesh.material.diffuseColor = new babylon.Color3(1, 1, 1);
+  this.mesh.material.backFaceCulling = false;
+  this.mesh.position = new babylon.Vector3(5, -10, -15);
+  this.mesh.rotation = new babylon.Vector3(Math.PI / 2, 0, 0);
+
+  //finally, say which mesh will be collisionable
+  this.mesh.checkCollisions = true;
+};
+
+exports['default'] = Ground;
+module.exports = exports['default'];
+
+},{"babylonjs":1}],5:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+var babylon = require('babylonjs');
+
+var Player = (function () {
+  function Player(options) {
+    _classCallCheck(this, Player);
+
+    // Need a free camera for collisions
+    this.camera = new babylon.FreeCamera('FreeCamera', new babylon.Vector3(0, -8, -20), options.scene);
+    this.camera.attachControl(options.canvas, true);
+
+    //Then apply collisions and gravity to the active camera
+    this.camera.checkCollisions = true;
+    this.camera.applyGravity = true;
+
+    //Set the ellipsoid around the camera (e.g. your player's size)
+    this.camera.ellipsoid = new babylon.Vector3(1, 1, 1);
+  }
+
+  _createClass(Player, [{
+    key: 'position',
+    get: function get() {
+      return this.camera.position;
+    }
+  }, {
+    key: 'animations',
+    get: function get() {
+      return this.camera.animations;
+    },
+    set: function set(value) {
+      this.camera.animations = value;
+    }
+  }]);
+
+  return Player;
+})();
+
+exports['default'] = Player;
+module.exports = exports['default'];
+
+},{"babylonjs":1}],6:[function(require,module,exports){
+'use strict';
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+var _GameJs = require("./Game.js");
+
+var _GameJs2 = _interopRequireDefault(_GameJs);
+
+window.addEventListener('DOMContentLoaded', function () {
+  var game = new _GameJs2['default']({
+    canvas: document.getElementById('renderCanvas')
+  });
+
+  game.start();
+});
+
+},{"./Game.js":3}]},{},[6]);
