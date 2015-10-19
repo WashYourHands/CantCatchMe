@@ -38,7 +38,7 @@ export default class Game {
     });
 
     window.addEventListener('resize', () => this.onResize);
-    window.addEventListener('onkeyup', () => this.onKeyUp);
+    window.addEventListener('keyup', (ev) => this.onKeyUp(ev));
   }
 
   onResize() {

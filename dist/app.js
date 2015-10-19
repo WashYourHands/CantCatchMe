@@ -140,8 +140,8 @@ var Game = (function () {
       window.addEventListener('resize', function () {
         return _this.onResize;
       });
-      window.addEventListener('onkeyup', function () {
-        return _this.onKeyUp;
+      window.addEventListener('keyup', function (ev) {
+        return _this.onKeyUp(ev);
       });
     }
   }, {
