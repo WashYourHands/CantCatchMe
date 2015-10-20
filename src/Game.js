@@ -10,7 +10,7 @@ export default class Game {
 
     // Create camera and light
     // TODO: is it used?
-    new babylon.PointLight("Point", new babylon.Vector3(5, 10, 5), this.scene);
+    new babylon.PointLight("Point", new babylon.Vector3(5, 10000, 5), this.scene);
 
     this.player = new Player({
       scene: this.scene,
@@ -18,7 +18,8 @@ export default class Game {
     });
 
     this.ground = new Ground({
-      scene: this.scene
+      scene: this.scene,
+      player: this.player
     });
 
     this.dragon = new Dragon({
@@ -38,11 +39,23 @@ export default class Game {
     });
 
     window.addEventListener('resize', () => this.onResize);
+    window.addEventListener('keydown', (ev) => this.onKeyDown(ev));
     window.addEventListener('keyup', (ev) => this.onKeyUp(ev));
   }
 
   onResize() {
     this.engine.resize();
+  }
+
+  onKeyDown(ev) {
+    switch (ev.keyCode) {
+      case 37:
+      case 38:
+      case 39:
+      case 40:
+        this.ground.checkPlayerPosition();
+        break;
+    }
   }
 
   onKeyUp(ev) {
