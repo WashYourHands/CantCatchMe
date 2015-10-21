@@ -10,12 +10,13 @@ export default class Game {
 
     // Create camera and light
     // TODO: is it used?
-    new babylon.PointLight("Point", new babylon.Vector3(5, 10000, 5), this.scene);
+    new babylon.HemisphericLight("light1", new babylon.Vector3(0, 1, 0), this.scene);
 
     this.player = new Player({
       scene: this.scene,
       canvas: options.canvas
     });
+    //this.player.mana = 100;
 
     this.ground = new Ground({
       scene: this.scene,
@@ -61,6 +62,10 @@ export default class Game {
   onKeyUp(ev) {
     switch (ev.keyCode) {
       case 32:
+        if (this.player.mana < 10){
+          return;
+        }
+        this.player.mana -= 10;
         this.player.animations = [];
 
         var a = new babylon.Animation("a", "position.y", 20, babylon.Animation.ANIMATIONTYPE_FLOAT, babylon.Animation.ANIMATIONLOOPMODE_CYCLE);
