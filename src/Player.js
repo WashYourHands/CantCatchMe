@@ -26,7 +26,7 @@ export default class Player {
     this.manaBar = this.generateManaBar(options.scene, this.camera);
 
     options.scene.registerBeforeRender(() => {
-      this.health -= 11;
+      this.health -= 0.01;
     });
   }
 

@@ -359,7 +359,7 @@ var Player = (function () {
     this.manaBar = this.generateManaBar(options.scene, this.camera);
 
     options.scene.registerBeforeRender(function () {
-      _this.health -= 11;
+      _this.health -= 0.01;
     });
   }
 
