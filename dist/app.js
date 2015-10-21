@@ -57,8 +57,8 @@ var Dragon = function Dragon(options) {
   // First animated player
   this.sprite = new babylon.Sprite("player", new babylon.SpriteManager('dragonManager', TEXTURE_PATH, 2, 128, options.scene));
   this.sprite.playAnimation(12, 16, true, 100);
-  this.sprite.position.z = -19;
-  this.sprite.position.y = -8;
+  this.sprite.position.z = 2;
+  this.sprite.position.y = 2;
   this.sprite.size = 1;
   this.sprite.isPickable = true;
 
@@ -106,15 +106,17 @@ var Game = (function () {
 
     // Create camera and light
     // TODO: is it used?
-    new babylon.PointLight("Point", new babylon.Vector3(5, 10, 5), this.scene);
+    new babylon.HemisphericLight("light1", new babylon.Vector3(0, 1, 0), this.scene);
 
     this.player = new _PlayerJs2['default']({
       scene: this.scene,
       canvas: options.canvas
     });
+    //this.player.mana = 100;
 
     this.ground = new _GroundJs2['default']({
-      scene: this.scene
+      scene: this.scene,
+      player: this.player
     });
 
     this.dragon = new _DragonJs2['default']({
@@ -140,6 +142,9 @@ var Game = (function () {
       window.addEventListener('resize', function () {
         return _this.onResize;
       });
+      window.addEventListener('keydown', function (ev) {
+        return _this.onKeyDown(ev);
+      });
       window.addEventListener('keyup', function (ev) {
         return _this.onKeyUp(ev);
       });
@@ -150,10 +155,26 @@ var Game = (function () {
       this.engine.resize();
     }
   }, {
+    key: 'onKeyDown',
+    value: function onKeyDown(ev) {
+      switch (ev.keyCode) {
+        case 37:
+        case 38:
+        case 39:
+        case 40:
+          this.ground.checkPlayerPosition();
+          break;
+      }
+    }
+  }, {
     key: 'onKeyUp',
     value: function onKeyUp(ev) {
       switch (ev.keyCode) {
         case 32:
+          if (this.player.mana < 10) {
+            return;
+          }
+          this.player.mana -= 10;
           this.player.animations = [];
 
           var a = new babylon.Animation("a", "position.y", 20, babylon.Animation.ANIMATIONTYPE_FLOAT, babylon.Animation.ANIMATIONLOOPMODE_CYCLE);
@@ -196,23 +217,100 @@ Object.defineProperty(exports, '__esModule', {
   value: true
 });
 
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
 var babylon = require('babylonjs');
 
-var Ground = function Ground(options) {
-  _classCallCheck(this, Ground);
+var TEXTURE_PATH = 'textures/grass.jpg';
+var TEXTURE_SIZE = 5;
+var PLANE_SIZE = 1200;
+var GROUND_DRAW_DIFF = 250;
 
-  this.mesh = babylon.Mesh.CreatePlane('ground', 20.0, options.scene);
-  this.mesh.material = new babylon.StandardMaterial('groundMat', options.scene);
-  this.mesh.material.diffuseColor = new babylon.Color3(1, 1, 1);
-  this.mesh.material.backFaceCulling = false;
-  this.mesh.position = new babylon.Vector3(5, -10, -15);
-  this.mesh.rotation = new babylon.Vector3(Math.PI / 2, 0, 0);
+var Ground = (function () {
+  function Ground(options) {
+    _classCallCheck(this, Ground);
 
-  //finally, say which mesh will be collisionable
-  this.mesh.checkCollisions = true;
-};
+    this.scene = options.scene;
+    this.map = {};
+    this.player = options.player;
+    this.createPlaneIfNotExists(0, 0);
+    this.createPlaneIfNotExists(-1, 0);
+    this.createPlaneIfNotExists(0, -1);
+    this.createPlaneIfNotExists(-1, -1);
+    this.prevX = 0;
+    this.prevZ = 0;
+  }
+
+  _createClass(Ground, [{
+    key: 'checkPlayerPosition',
+    value: function checkPlayerPosition() {
+      var playerPosition = this.player.camera.position;
+      var xPlaneIndex = Math.floor(playerPosition.x / PLANE_SIZE);
+      var zPlaneIndex = Math.floor(playerPosition.z / PLANE_SIZE);
+      var xCenter = (xPlaneIndex + 0.5) * PLANE_SIZE;
+      var zCenter = (zPlaneIndex + 0.5) * PLANE_SIZE;
+      var forwardOnX = playerPosition.x - xCenter > GROUND_DRAW_DIFF;
+      var forwardOnZ = playerPosition.z - zCenter > GROUND_DRAW_DIFF;
+      var backwardOnX = xCenter - playerPosition.x > GROUND_DRAW_DIFF;
+      var backwardOnZ = zCenter - playerPosition.z > GROUND_DRAW_DIFF;
+      //по x
+      if (forwardOnX) {
+        this.createPlaneIfNotExists(xPlaneIndex + 1, zPlaneIndex);
+      }
+      if (backwardOnX) {
+        this.createPlaneIfNotExists(xPlaneIndex - 1, zPlaneIndex);
+      }
+      //по z
+      if (forwardOnZ) {
+        this.createPlaneIfNotExists(xPlaneIndex, zPlaneIndex + 1);
+      }
+      if (backwardOnZ) {
+        this.createPlaneIfNotExists(xPlaneIndex, zPlaneIndex - 1);
+      }
+      //диагонали
+      if (forwardOnX && forwardOnZ) {
+        this.createPlaneIfNotExists(xPlaneIndex + 1, zPlaneIndex + 1);
+      }
+      if (forwardOnX && backwardOnZ) {
+        this.createPlaneIfNotExists(xPlaneIndex + 1, zPlaneIndex - 1);
+      }
+      if (backwardOnX && forwardOnZ) {
+        this.createPlaneIfNotExists(xPlaneIndex - 1, zPlaneIndex + 1);
+      }
+      if (backwardOnX && backwardOnZ) {
+        this.createPlaneIfNotExists(xPlaneIndex - 1, zPlaneIndex - 1);
+      }
+      if (zPlaneIndex != this.prevZ || xPlaneIndex != this.prevX) {
+        console.log(zPlaneIndex, xPlaneIndex);
+      }
+      this.prevX = xPlaneIndex;
+      this.prevZ = zPlaneIndex;
+    }
+  }, {
+    key: 'createPlaneIfNotExists',
+    value: function createPlaneIfNotExists(xPlaneIndex, zPlaneIndex) {
+      if (this.map[xPlaneIndex + "_" + zPlaneIndex] != undefined) {
+        return;
+      }
+      var mesh = babylon.Mesh.CreatePlane('ground', PLANE_SIZE, this.scene, true);
+      //Creation of a repeated textured material
+      var materialPlane = new babylon.StandardMaterial("texturePlane", this.scene);
+      materialPlane.diffuseTexture = new babylon.Texture(TEXTURE_PATH, this.scene);
+      materialPlane.diffuseTexture.uScale = PLANE_SIZE / TEXTURE_SIZE;
+      materialPlane.diffuseTexture.vScale = PLANE_SIZE / TEXTURE_SIZE;
+      materialPlane.backFaceCulling = false; //Always show the front and the back of an element
+      mesh.material = materialPlane;
+      mesh.position = new babylon.Vector3((xPlaneIndex + 0.5) * PLANE_SIZE, 0, (zPlaneIndex + 0.5) * PLANE_SIZE);
+      mesh.rotation = new babylon.Vector3(Math.PI / 2, 0, 0);
+      mesh.checkCollisions = true;
+      this.map[xPlaneIndex + "_" + zPlaneIndex] = mesh;
+    }
+  }]);
+
+  return Ground;
+})();
 
 exports['default'] = Ground;
 module.exports = exports['default'];
@@ -230,12 +328,22 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 var babylon = require('babylonjs');
 
+var MAX_HEALTH = 100;
+var MAX_MANA = 100;
+var BAR_SIZE = 1;
+var BAR_Y_SCALING = 0.05;
+var X_BAR = -0.5;
+var Z_BAR = 1.5;
+var Y_BAR = -0.5;
+
 var Player = (function () {
   function Player(options) {
+    var _this = this;
+
     _classCallCheck(this, Player);
 
     // Need a free camera for collisions
-    this.camera = new babylon.FreeCamera('FreeCamera', new babylon.Vector3(0, -8, -20), options.scene);
+    this.camera = new babylon.FreeCamera('FreeCamera', new babylon.Vector3(0, 2, 0), options.scene);
     this.camera.attachControl(options.canvas, true);
 
     //Then apply collisions and gravity to the active camera
@@ -244,9 +352,84 @@ var Player = (function () {
 
     //Set the ellipsoid around the camera (e.g. your player's size)
     this.camera.ellipsoid = new babylon.Vector3(1, 1, 1);
+
+    this.status = { mana: MAX_MANA, health: MAX_HEALTH };
+
+    this.healthBar = this.generateHealthBar(options.scene, this.camera);
+    this.manaBar = this.generateManaBar(options.scene, this.camera);
+
+    options.scene.registerBeforeRender(function () {
+      _this.health -= 0.01;
+    });
   }
 
   _createClass(Player, [{
+    key: 'generateHealthBar',
+    value: function generateHealthBar(scene, camera) {
+      var healthBar = babylon.Mesh.CreatePlane("health_bar", BAR_SIZE, scene, false);
+      healthBar.material = new babylon.StandardMaterial("health_bar", scene);
+      healthBar.material.emissiveColor = new babylon.Color3(1, 0, 0);
+      healthBar.material.diffuseColor = new babylon.Color3(1, 0, 0);
+      healthBar.material.hasAlpha = false;
+      healthBar.scaling.y = BAR_Y_SCALING;
+      healthBar.position.x = X_BAR;
+      healthBar.position.z = Z_BAR;
+      healthBar.position.y = Y_BAR;
+      healthBar.parent = camera;
+      return healthBar;
+    }
+  }, {
+    key: 'generateManaBar',
+    value: function generateManaBar(scene, camera) {
+      var manaBar = babylon.Mesh.CreatePlane("mana_bar", BAR_SIZE, scene, false);
+      manaBar.material = new babylon.StandardMaterial("mana_bar", scene);
+      manaBar.material.emissiveColor = new babylon.Color3(0, 0, 1);
+      manaBar.material.diffuseColor = new babylon.Color3(0, 0, 1);
+      manaBar.material.hasAlpha = false;
+      manaBar.scaling.y = BAR_Y_SCALING;
+      manaBar.position.x = X_BAR;
+      manaBar.position.z = Z_BAR;
+      manaBar.position.y = Y_BAR + BAR_SIZE * BAR_Y_SCALING + 0.01; // нижняя координата+высота+промежуток
+      manaBar.parent = camera;
+      return manaBar;
+    }
+  }, {
+    key: 'resizeBar',
+    value: function resizeBar(bar, percent) {
+      bar.scaling.x = percent;
+      bar.position.x = X_BAR - (1 - percent) / 2;
+    }
+  }, {
+    key: 'health',
+    get: function get() {
+      return this.status.health;
+    },
+    set: function set(value) {
+      if (value > MAX_HEALTH) {
+        value = MAX_HEALTH;
+      }
+      if (value < 0) {
+        value = 0;
+      }
+      this.status.health = value;
+      this.resizeBar(this.healthBar, value / MAX_HEALTH);
+    }
+  }, {
+    key: 'mana',
+    get: function get() {
+      return this.status.mana;
+    },
+    set: function set(value) {
+      if (value > MAX_MANA) {
+        value = MAX_MANA;
+      }
+      if (value < 0) {
+        value = 0;
+      }
+      this.status.mana = value;
+      this.resizeBar(this.manaBar, value / MAX_MANA);
+    }
+  }, {
     key: 'position',
     get: function get() {
       return this.camera.position;
@@ -277,11 +460,13 @@ var _GameJs = require("./Game.js");
 var _GameJs2 = _interopRequireDefault(_GameJs);
 
 window.addEventListener('DOMContentLoaded', function () {
+  var canvas = document.getElementById('renderCanvas');
   var game = new _GameJs2['default']({
-    canvas: document.getElementById('renderCanvas')
+    canvas: canvas
   });
 
   game.start();
+  canvas.height = canvas.width * 9 / 16;
 });
 
 },{"./Game.js":3}]},{},[6]);
