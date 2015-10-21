@@ -26,7 +26,7 @@ export default class Player {
     this.manaBar = this.generateManaBar(options.scene, this.camera);
 
     options.scene.registerBeforeRender(() => {
-      this.health -= 0.01;
+      this.health -= 11;
     });
   }
 
@@ -64,24 +64,30 @@ export default class Player {
   }
 
   get health() {
-    return this.state.health;
+    return this.status.health;
   }
 
   set health(value) {
     if (value > MAX_HEALTH) {
       value = MAX_HEALTH;
     }
+    if (value < 0) {
+      value = 0;
+    }
     this.status.health = value;
     this.resizeBar(this.healthBar, value/MAX_HEALTH);
   }
 
   get mana() {
-    return this.state.mana;
+    return this.status.mana;
   }
 
   set mana(value) {
     if (value > MAX_MANA) {
       value = MAX_MANA;
+    }
+    if (value < 0) {
+      value = 0;
     }
     this.status.mana = value;
     this.resizeBar(this.manaBar, value/MAX_MANA);

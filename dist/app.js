@@ -359,7 +359,7 @@ var Player = (function () {
     this.manaBar = this.generateManaBar(options.scene, this.camera);
 
     options.scene.registerBeforeRender(function () {
-      _this.health -= 0.01;
+      _this.health -= 11;
     });
   }
 
@@ -402,11 +402,14 @@ var Player = (function () {
   }, {
     key: 'health',
     get: function get() {
-      return this.state.health;
+      return this.status.health;
     },
     set: function set(value) {
       if (value > MAX_HEALTH) {
         value = MAX_HEALTH;
+      }
+      if (value < 0) {
+        value = 0;
       }
       this.status.health = value;
       this.resizeBar(this.healthBar, value / MAX_HEALTH);
@@ -414,11 +417,14 @@ var Player = (function () {
   }, {
     key: 'mana',
     get: function get() {
-      return this.state.mana;
+      return this.status.mana;
     },
     set: function set(value) {
       if (value > MAX_MANA) {
         value = MAX_MANA;
+      }
+      if (value < 0) {
+        value = 0;
       }
       this.status.mana = value;
       this.resizeBar(this.manaBar, value / MAX_MANA);
