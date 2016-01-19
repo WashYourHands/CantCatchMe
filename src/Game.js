@@ -24,7 +24,8 @@ export default class Game {
     });
 
     this.dragon = new Dragon({
-      scene: this.scene
+      scene: this.scene,
+      player: this.player
     });
 
     // Set gravity for the scene (G force like, on Y-axis)
@@ -60,36 +61,49 @@ export default class Game {
   }
 
   onKeyUp(ev) {
+    var jump = () => {
+      if (this.player.mana < 10){
+        return;
+      }
+      this.player.mana -= 10;
+      this.player.animations = [];
+
+      var a = new babylon.Animation("a", "position.y", 20, babylon.Animation.ANIMATIONTYPE_FLOAT, babylon.Animation.ANIMATIONLOOPMODE_CYCLE);
+      // Animation keys
+      var keys = [];
+      var f = 0;
+      var ii = 0;
+      for (var i = 0; i <= 5; i++) {
+        ii += i / 10;
+        keys.push({frame: f, value: this.player.position.y + ii});
+        f++;
+      }
+      var ii = 0;
+      for (var i = 0; i <= 5; i++) {
+        ii += i / 10;
+        keys.push({frame: f, value: this.player.position.y + 1.5 - ii});
+        f++;
+      }
+      a.setKeys(keys);
+      var easingFunction = new babylon.CircleEase();
+      easingFunction.setEasingMode(babylon.EasingFunction.EASINGMODE_EASEINOUT);
+      a.setEasingFunction(easingFunction);
+      this.player.animations.push(a);
+      this.scene.beginAnimation(this.player, 0, 20, false);
+    };
+
+    var acceleration = () => {
+      var player = this.player;
+      if (player.mana < 10){
+        return;
+      }
+      player.mana -= 10;
+
+      player.crazySpeed();
+    };
     switch (ev.keyCode) {
       case 32:
-        if (this.player.mana < 10){
-          return;
-        }
-        this.player.mana -= 10;
-        this.player.animations = [];
-
-        var a = new babylon.Animation("a", "position.y", 20, babylon.Animation.ANIMATIONTYPE_FLOAT, babylon.Animation.ANIMATIONLOOPMODE_CYCLE);
-        // Animation keys
-        var keys = [];
-        var f = 0;
-        var ii = 0;
-        for (var i = 0; i <= 5; i++) {
-          ii += i / 10;
-          keys.push({frame: f, value: this.player.position.y + ii});
-          f++;
-        }
-        var ii = 0;
-        for (var i = 0; i <= 5; i++) {
-          ii += i / 10;
-          keys.push({frame: f, value: this.player.position.y + 1.5 - ii});
-          f++;
-        }
-        a.setKeys(keys);
-        var easingFunction = new babylon.CircleEase();
-        easingFunction.setEasingMode(babylon.EasingFunction.EASINGMODE_EASEINOUT);
-        a.setEasingFunction(easingFunction);
-        this.player.animations.push(a);
-        this.scene.beginAnimation(this.player, 0, 20, false);
+        acceleration();
         break;
     }
   }

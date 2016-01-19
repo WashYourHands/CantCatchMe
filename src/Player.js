@@ -7,11 +7,14 @@ const BAR_Y_SCALING = 0.05;
 const X_BAR = -0.5;
 const Z_BAR = 1.5;
 const Y_BAR = -0.5;
+const PLAYER_BASIC_SPEED = 1;
+const PLAYER_CrAzY_SPEED = 3;
 export default class Player {
   constructor(options) {
     // Need a free camera for collisions
     this.camera = new babylon.FreeCamera('FreeCamera', new babylon.Vector3(0, 2, 0), options.scene);
     this.camera.attachControl(options.canvas, true);
+    this.camera.speed = PLAYER_BASIC_SPEED;
 
     //Then apply collisions and gravity to the active camera
     this.camera.checkCollisions = true;
@@ -26,7 +29,7 @@ export default class Player {
     this.manaBar = this.generateManaBar(options.scene, this.camera);
 
     options.scene.registerBeforeRender(() => {
-      this.health -= 0.01;
+      this.health -= 0.025;
     });
   }
 
@@ -63,6 +66,20 @@ export default class Player {
     bar.position.x = X_BAR-(1-percent)/2;
   }
 
+  crazySpeed() {
+    this.crazy = true;
+    this.camera.speed = PLAYER_CrAzY_SPEED;
+    var player = this;
+    setTimeout(function() {
+      player.resetSpeed();
+    }, 2000);
+  }
+
+  resetSpeed() {
+    this.camera.speed = PLAYER_BASIC_SPEED;
+    this.crazy = false;
+  }
+
   get health() {
     return this.status.health;
   }
@@ -73,6 +90,7 @@ export default class Player {
     }
     if (value < 0) {
       value = 0;
+      alert("YOU'RE DEAD")
     }
     this.status.health = value;
     this.resizeBar(this.healthBar, value/MAX_HEALTH);
