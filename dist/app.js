@@ -62,8 +62,28 @@ var Dragon = function Dragon(options) {
   this.sprite.size = 1;
   this.sprite.isPickable = true;
 
+  var player = options.player;
   options.scene.registerBeforeRender(function () {
-    _this.sprite.position.z += 0.1;
+    var baseSpeed = 0.05;
+    var maxSpeed = player.camera.speed + baseSpeed;
+
+    var curSpeed = baseSpeed;
+
+    //distance between dragon and player in XZ plane
+    var distance = Math.sqrt(Math.pow(player.position.x - _this.sprite.position.x, 2) + Math.pow(player.position.z - _this.sprite.position.z, 2));
+
+    if (distance <= 1) {
+      curSpeed = maxSpeed;
+    } else if (distance <= 20) {
+      curSpeed = (20 - distance) / 20 * player.camera.speed;
+      if (player.crazy) {
+        curSpeed *= 0.5;
+      } else {
+        curSpeed *= 1.5;
+      }
+    }
+
+    _this.sprite.position.z += curSpeed;
   });
 };
 
@@ -120,7 +140,8 @@ var Game = (function () {
     });
 
     this.dragon = new _DragonJs2['default']({
-      scene: this.scene
+      scene: this.scene,
+      player: this.player
     });
 
     // Set gravity for the scene (G force like, on Y-axis)
@@ -169,36 +190,51 @@ var Game = (function () {
   }, {
     key: 'onKeyUp',
     value: function onKeyUp(ev) {
+      var _this2 = this;
+
+      var jump = function jump() {
+        if (_this2.player.mana < 10) {
+          return;
+        }
+        _this2.player.mana -= 10;
+        _this2.player.animations = [];
+
+        var a = new babylon.Animation("a", "position.y", 20, babylon.Animation.ANIMATIONTYPE_FLOAT, babylon.Animation.ANIMATIONLOOPMODE_CYCLE);
+        // Animation keys
+        var keys = [];
+        var f = 0;
+        var ii = 0;
+        for (var i = 0; i <= 5; i++) {
+          ii += i / 10;
+          keys.push({ frame: f, value: _this2.player.position.y + ii });
+          f++;
+        }
+        var ii = 0;
+        for (var i = 0; i <= 5; i++) {
+          ii += i / 10;
+          keys.push({ frame: f, value: _this2.player.position.y + 1.5 - ii });
+          f++;
+        }
+        a.setKeys(keys);
+        var easingFunction = new babylon.CircleEase();
+        easingFunction.setEasingMode(babylon.EasingFunction.EASINGMODE_EASEINOUT);
+        a.setEasingFunction(easingFunction);
+        _this2.player.animations.push(a);
+        _this2.scene.beginAnimation(_this2.player, 0, 20, false);
+      };
+
+      var acceleration = function acceleration() {
+        var player = _this2.player;
+        if (player.mana < 10) {
+          return;
+        }
+        player.mana -= 10;
+
+        player.crazySpeed();
+      };
       switch (ev.keyCode) {
         case 32:
-          if (this.player.mana < 10) {
-            return;
-          }
-          this.player.mana -= 10;
-          this.player.animations = [];
-
-          var a = new babylon.Animation("a", "position.y", 20, babylon.Animation.ANIMATIONTYPE_FLOAT, babylon.Animation.ANIMATIONLOOPMODE_CYCLE);
-          // Animation keys
-          var keys = [];
-          var f = 0;
-          var ii = 0;
-          for (var i = 0; i <= 5; i++) {
-            ii += i / 10;
-            keys.push({ frame: f, value: this.player.position.y + ii });
-            f++;
-          }
-          var ii = 0;
-          for (var i = 0; i <= 5; i++) {
-            ii += i / 10;
-            keys.push({ frame: f, value: this.player.position.y + 1.5 - ii });
-            f++;
-          }
-          a.setKeys(keys);
-          var easingFunction = new babylon.CircleEase();
-          easingFunction.setEasingMode(babylon.EasingFunction.EASINGMODE_EASEINOUT);
-          a.setEasingFunction(easingFunction);
-          this.player.animations.push(a);
-          this.scene.beginAnimation(this.player, 0, 20, false);
+          acceleration();
           break;
       }
     }
@@ -335,6 +371,8 @@ var BAR_Y_SCALING = 0.05;
 var X_BAR = -0.5;
 var Z_BAR = 1.5;
 var Y_BAR = -0.5;
+var PLAYER_BASIC_SPEED = 1;
+var PLAYER_CrAzY_SPEED = 3;
 
 var Player = (function () {
   function Player(options) {
@@ -345,6 +383,7 @@ var Player = (function () {
     // Need a free camera for collisions
     this.camera = new babylon.FreeCamera('FreeCamera', new babylon.Vector3(0, 2, 0), options.scene);
     this.camera.attachControl(options.canvas, true);
+    this.camera.speed = PLAYER_BASIC_SPEED;
 
     //Then apply collisions and gravity to the active camera
     this.camera.checkCollisions = true;
@@ -359,7 +398,7 @@ var Player = (function () {
     this.manaBar = this.generateManaBar(options.scene, this.camera);
 
     options.scene.registerBeforeRender(function () {
-      _this.health -= 0.01;
+      _this.health -= 0.025;
     });
   }
 
@@ -400,6 +439,22 @@ var Player = (function () {
       bar.position.x = X_BAR - (1 - percent) / 2;
     }
   }, {
+    key: 'crazySpeed',
+    value: function crazySpeed() {
+      this.crazy = true;
+      this.camera.speed = PLAYER_CrAzY_SPEED;
+      var player = this;
+      setTimeout(function () {
+        player.resetSpeed();
+      }, 2000);
+    }
+  }, {
+    key: 'resetSpeed',
+    value: function resetSpeed() {
+      this.camera.speed = PLAYER_BASIC_SPEED;
+      this.crazy = false;
+    }
+  }, {
     key: 'health',
     get: function get() {
       return this.status.health;
@@ -410,6 +465,7 @@ var Player = (function () {
       }
       if (value < 0) {
         value = 0;
+        alert("YOU'RE DEAD");
       }
       this.status.health = value;
       this.resizeBar(this.healthBar, value / MAX_HEALTH);
